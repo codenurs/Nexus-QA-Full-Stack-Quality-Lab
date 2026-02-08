@@ -14,3 +14,9 @@ playwright/.cache/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Playwright
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
