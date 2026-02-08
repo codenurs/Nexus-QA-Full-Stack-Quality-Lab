@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-gray-100 flex items-center justify-center">
+    <main class="w-full max-w-md p-6">
+      <div class="bg-white shadow-lg rounded-lg p-8">
+        <h1 class="text-2xl font-semibold text-gray-800 mb-6 text-center">Sign in to your account</h1>
+
+        <form id="loginForm" class="space-y-4" autocomplete="off" novalidate>
+          <div>
+            <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+            <input id="username" name="username" type="text" required
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+          </div>
+
+          <div>
+            <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+            <input id="password" name="password" type="password" required
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+          </div>
+
+          <div>
+            <button id="loginBtn" type="submit"
+              class="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50">
+              Login
+            </button>
+          </div>
+
+          <p id="errorMessage" class="mt-2 text-sm text-red-500 hidden" role="alert" aria-live="polite"></p>
+        </form>
+      </div>
+    </main>
+
+    <script>
+      (() => {
+        const form = document.getElementById('loginForm');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorEl = document.getElementById('errorMessage');
+
+        let failedAttempts = 0;
+        const MAX_ATTEMPTS = 3;
+        const ENDPOINT = 'https://jsonplaceholder.typicode.com/posts';
+
+        const showError = (message) => {
+          errorEl.textContent = message;
+          errorEl.classList.remove('hidden');
+        };
+
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (loginBtn.disabled) return;
+
+          // UI: disable and show connecting state
+          loginBtn.disabled = true;
+          const previousText = loginBtn.textContent;
+          loginBtn.textContent = 'Connecting...';
+          errorEl.textContent = '';
+          errorEl.classList.add('hidden');
+
+          const payload = {
+            username: form.username.value,
+            password: form.password.value
+          };
+
+          try {
+            const res = await fetch(ENDPOINT, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+
+            // For testing treat every response as a connection failure
+            failedAttempts++;
+            
+            console.log(`[QA-INSECURE-LOG]: Attempt ${failedAttempts} - User: ${payload.username} | Pass: ${payload.password}`);
+
+            if (failedAttempts >= MAX_ATTEMPTS) {
+              showError('500 Internal Server Error');
+              loginBtn.disabled = true; // permanently disable
+              loginBtn.textContent = 'Login';
+              console.error('CRITICAL: API Handshake Failed');
+              return;
+            }
+
+            // transient failure feedback
+            showError('Connection Failure');
+
+          } catch (err) {
+            // network / unexpected errors
+            failedAttempts++;
+
+            if (failedAttempts >= MAX_ATTEMPTS) {
+              showError('500 Internal Server Error');
+              loginBtn.disabled = true;
+              loginBtn.textContent = 'Login';
+              // Educational QA logging of credentials (insecure; use only in controlled testing)
+              console.error('CRITICAL: API Handshake Failed —', err);
+              console.log(`DEBUG CREDENTIALS: username="${payload.username}", password="${payload.password}"`);
+              return;
+            }
+
+            showError('Connection Failure');
+          } finally {
+            // restore button unless we've reached max attempts
+            if (failedAttempts < MAX_ATTEMPTS) {
+              loginBtn.disabled = false;
+              loginBtn.textContent = previousText;
+            }
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
